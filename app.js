@@ -1,3 +1,7 @@
+
+AI Overview
+Code defines a practice clash app interface with Apex/Phantom teams, featuring a live score display and admin controls to generate matches.
+
 /* ============================================================
    SYNTHEX LEGION CHRONICLES — PRACTICE CLASH
    app.js — Complete Production Build
@@ -449,14 +453,25 @@ function renderPlayerProfile() {
             teamEl.textContent = '⚔ APEX';
             avatarEl.classList.add('apex');
         } else if (u.team === 'PHANTOM') {
-            teamEl.className   = 'badge badge-phantom';
-            teamEl.textContent = '🛡 PHANTOM';
-            avatarEl.classList.add('phantom');
-        } else {
+    teamEl.className = 'badge badge-phantom';
+    teamEl.textContent = '🛡 PHANTOM';
+    avatarEl.classList.add('phantom');
+} else {
+    teamEl.className = 'badge badge-gold';
+    teamEl.textContent = '⏳ Pending Team';
+}
+
+// NEW: Add the Captain Badge if they are the captain
+if (u.isCaptain) {
+    teamEl.innerHTML += ` <span class="ml-1 px-1 bg-gold-500 text-black rounded text-[7px] font-black tracking-widest uppercase">Captain</span>`;
+    avatarEl.style.boxShadow = "0 0 15px rgba(245,158,11,0.4)";
+    avatarEl.style.borderColor = "var(--gold-bright)";
+} else {
+    avatarEl.style.boxShadow = ""; // reset for normal players
+}
             teamEl.className   = 'badge badge-gold';
             teamEl.textContent = '⏳ Pending Team';
         }
-    }
 }
 
 // ========================
@@ -600,7 +615,12 @@ function renderFixtures(containerId, isAdmin) {
 
     roundMatches.forEach((m, idx) => {
         const isMine = !isAdmin && (userId === m.p1_id || userId === m.p2_id);
-        const isCompleted = m.status === 'completed';
+const isCompleted = m.status === 'completed';
+
+// NEW: Check if current user is a Captain of one of the teams in this match
+const myTeam = state.currentUser?.team;
+const isMyTeamMatch = myTeam && (m.p1_team === myTeam || m.p2_team === myTeam);
+const isCaptainAuth = !isAdmin && state.currentUser?.isCaptain && isMyTeamMatch;
 
         // Determine outcome for player view
         let outcomeHtml = '';
@@ -632,7 +652,7 @@ function renderFixtures(containerId, isAdmin) {
                     ` : ''}
                 </div>`;
         } else {
-            const canSubmit = isMine || isAdmin;
+            const canSubmit = isMine || isAdmin || isCaptainAuth;
             centerHtml = `
                 <div class="text-center">
                     <div class="match-vs-text">VS</div>
@@ -708,16 +728,26 @@ function renderAdminPlayers() {
                 <div class="text-[9px] text-slate-500 font-black tracking-widest">${p.id}</div>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
+                <!-- NEW CROWN BUTTON -->
+                <button onclick="toggleCaptain('${p.id}', '${p.team}', ${!!p.isCaptain})"
+                    class="captain-btn ${p.isCaptain ? 'is-captain' : ''}" 
+                    title="${p.isCaptain ? 'Remove Captain' : 'Make Team Captain'}">
+                    <i data-lucide="crown" class="w-3 h-3"></i>
+                </button>
+
+                <!-- TEAM ASSIGN BUTTONS -->
                 <button onclick="assignTeam('${p.id}', 'APEX')"
-                    class="team-assign-btn ${p.team === 'APEX' ? 'apex-active' : ''}">T</button>
+                    class="team-assign-btn ${p.team === 'APEX' ? 'apex-active' : ''}">A</button>
                 <button onclick="assignTeam('${p.id}', 'PHANTOM')"
-                    class="team-assign-btn ${p.team === 'PHANTOM' ? 'phantom-active' : ''}">S</button>
+                    class="team-assign-btn ${p.team === 'PHANTOM' ? 'phantom-active' : ''}">P</button>
+                
+                <!-- DELETE BUTTON -->
                 <button onclick="deletePlayer('${p.id}', '${p.name}')"
                     class="delete-player-btn" title="Remove player">
-                    <i data-lucide="trash-2"></i>
+                    <i data-lucide="trash-2" class="w-3 h-3"></i>
                 </button>
-            </div>
-        </div>`).join('');
+            </div> 
+            </div>`).join('');
 
     lucide.createIcons();
 }
@@ -743,6 +773,34 @@ function updateAdminRoundStatus() {
 // ========================
 // ADMIN ACTIONS
 // ========================
+async function toggleCaptain(playerId, team, isCurrentlyCaptain) {
+    if (!team) return showToast('Assign player to a team first!', 'alert-circle');
+    
+    try {
+        const batch = db.batch();
+        
+        if (!isCurrentlyCaptain) {
+            // Find if this team already has a captain, and demote them
+            const currentCap = state.players.find(p => p.team === team && p.isCaptain);
+            if (currentCap) {
+                batch.update(db.collection('players').doc(currentCap.id), { isCaptain: false });
+            }
+            // Promote the new player
+            batch.update(db.collection('players').doc(playerId), { isCaptain: true });
+            showToast('Team Captain assigned!', 'crown');
+        } else {
+            // Just demote the current player
+            batch.update(db.collection('players').doc(playerId), { isCaptain: false });
+            showToast('Captain status removed', 'user-minus');
+        }
+        
+        await batch.commit();
+    } catch (err) {
+        console.error('Captain toggle error:', err);
+        showToast('Failed to update captain', 'x-circle');
+    }
+}
+
 async function assignTeam(id, teamName) {
     try {
         await db.collection('players').doc(id).update({ team: teamName });
@@ -783,9 +841,9 @@ async function generateMatches() {
     const apex   = state.players.filter(p => p.team === 'APEX');
     const phantom = state.players.filter(p => p.team === 'PHANTOM');
 
-    if (apex.length !== 11 || phantom.length !== 11) {
+    if (apex.length !== 12 || phantom.length !== 12) {
         return showToast(
-            `Need 11 per team. APEX: ${apex.length}, PHANTOM: ${phantom.length}`,
+            `Need 12 per team. APEX: ${apex.length}, PHANTOM: ${phantom.length}`,
             'alert-circle'
         );
     }
@@ -801,12 +859,12 @@ async function generateMatches() {
                 const oldMatches = await db.collection('matches').get();
                 oldMatches.forEach(doc => batch.delete(doc.ref));
 
-                // Generate round-robin style (3 rounds, 11 matches each)
+                // Generate round-robin style (3 rounds, 12 matches each)
                 for (let round = 1; round <= 3; round++) {
                     const offset = round - 1;
-                    for (let i = 0; i < 11; i++) {
+                    for (let i = 0; i < 12; i++) {
                         const p1 = apex[i];
-                        const p2 = phantom[(i + offset) % 11];
+                        const p2 = phantom[(i + offset) % 12];
                         const matchRef = db.collection('matches').doc();
                         batch.set(matchRef, {
                             round,
