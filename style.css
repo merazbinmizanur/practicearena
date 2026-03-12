@@ -1,3 +1,7 @@
+
+AI Overview
+Code defines a practice clash app interface with Apex/Phantom teams, featuring a live score display and admin controls to generate matches.
+
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap');
 
 
@@ -711,3 +715,28 @@ body {
     100% { transform: translateY(0); opacity: 1; }
 }
 .animate-float-in { animation: floatIn 0.35s ease forwards; }
+
+/* ========================
+   CAPTAIN BUTTON (ADMIN)
+   ======================== */
+.captain-btn {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.2);
+    cursor: pointer; transition: all 0.2s;
+    margin-right: 4px;
+}
+.captain-btn:hover {
+    color: var(--gold-bright);
+    background: rgba(245,158,11,0.1);
+}
+.captain-btn.is-captain {
+    color: #000;
+    background: var(--gold-bright);
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(245,158,11,0.4);
+}
+.captain-btn:active { transform: scale(0.9); }
