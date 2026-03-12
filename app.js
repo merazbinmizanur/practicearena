@@ -1,7 +1,3 @@
-
-AI Overview
-Code defines a practice clash app interface with Apex/Phantom teams, featuring a live score display and admin controls to generate matches.
-
 /* ============================================================
    SYNTHEX LEGION CHRONICLES — PRACTICE CLASH
    app.js — Complete Production Build
