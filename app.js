@@ -249,6 +249,13 @@ function loadData() {
     // Players
     const u1 = db.collection('players').onSnapshot(snap => {
         state.players = snap.docs.map(d => d.data());
+        
+        // NEW: currentUser এর ডাটা রিয়েলটাইম আপডেট করা হচ্ছে
+        if (state.currentUser) {
+            const updatedUser = state.players.find(p => p.id === state.currentUser.id);
+            if (updatedUser) state.currentUser = updatedUser;
+        }
+        
         renderUI();
     }, err => { console.error('Players listener error:', err); showToast('Sync error — refreshing...', 'wifi-off'); });
 
@@ -422,47 +429,43 @@ if (resultsContainer) {
 }
 }
 
-// ========================
+
 // PLAYER PROFILE
-// ========================
 function renderPlayerProfile() {
     if (!state.currentUser) return;
     const u = state.players.find(p => p.id === state.currentUser.id) || state.currentUser;
-
-    const nameEl   = document.getElementById('prof-name');
-    const idEl     = document.getElementById('prof-id');
-    const teamEl   = document.getElementById('prof-team');
+    
+    const nameEl = document.getElementById('prof-name');
+    const idEl = document.getElementById('prof-id');
+    const teamEl = document.getElementById('prof-team');
     const avatarEl = document.getElementById('prof-avatar');
-
+    
     if (nameEl) nameEl.textContent = u.name || '—';
-    if (idEl)   idEl.textContent   = u.id || '—';
-
+    if (idEl) idEl.textContent = u.id || '—';
+    
     if (teamEl && avatarEl) {
         avatarEl.className = 'player-avatar-box';
         if (u.team === 'APEX') {
-            teamEl.className   = 'badge badge-apex';
+            teamEl.className = 'badge badge-apex';
             teamEl.textContent = '⚔ APEX';
             avatarEl.classList.add('apex');
         } else if (u.team === 'PHANTOM') {
-    teamEl.className = 'badge badge-phantom';
-    teamEl.textContent = '🛡 PHANTOM';
-    avatarEl.classList.add('phantom');
-} else {
-    teamEl.className = 'badge badge-gold';
-    teamEl.textContent = '⏳ Pending Team';
-}
-
-// NEW: Add the Captain Badge if they are the captain
-if (u.isCaptain) {
-    teamEl.innerHTML += ` <span class="ml-1 px-1 bg-gold-500 text-black rounded text-[7px] font-black tracking-widest uppercase">Captain</span>`;
-    avatarEl.style.boxShadow = "0 0 15px rgba(245,158,11,0.4)";
-    avatarEl.style.borderColor = "var(--gold-bright)";
-} else {
-    avatarEl.style.boxShadow = ""; // reset for normal players
-}
-            teamEl.className   = 'badge badge-gold';
+            teamEl.className = 'badge badge-phantom';
+            teamEl.textContent = '🛡 PHANTOM';
+            avatarEl.classList.add('phantom');
+        } else {
+            teamEl.className = 'badge badge-gold';
             teamEl.textContent = '⏳ Pending Team';
         }
+        if (u.isCaptain) {
+            teamEl.innerHTML += ` <span class="ml-1 px-1 bg-gold-500 text-black rounded text-[7px] font-black tracking-widest uppercase">Captain</span>`;
+            avatarEl.style.boxShadow = "0 0 15px rgba(245,158,11,0.4)";
+            avatarEl.style.borderColor = "var(--gold-bright)";
+        } else {
+            avatarEl.style.boxShadow = "";
+            avatarEl.style.borderColor = "";
+        }
+    }
 }
 
 // ========================
@@ -573,6 +576,9 @@ function setAdminRound(r) {
 // ========================
 // FIXTURES RENDERER
 // ========================
+// ========================
+// FIXTURES RENDERER (PREMIUM UI)
+// ========================
 function renderFixtures(containerId, isAdmin) {
     const list = document.getElementById(containerId);
     if (!list) return;
@@ -606,12 +612,11 @@ function renderFixtures(containerId, isAdmin) {
 
     roundMatches.forEach((m, idx) => {
         const isMine = !isAdmin && (userId === m.p1_id || userId === m.p2_id);
-const isCompleted = m.status === 'completed';
+        const isCompleted = m.status === 'completed';
 
-// NEW: Check if current user is a Captain of one of the teams in this match
-const myTeam = state.currentUser?.team;
-const isMyTeamMatch = myTeam && (m.p1_team === myTeam || m.p2_team === myTeam);
-const isCaptainAuth = !isAdmin && state.currentUser?.isCaptain && isMyTeamMatch;
+        const myTeam = state.currentUser?.team;
+        const isMyTeamMatch = myTeam && (m.p1_team === myTeam || m.p2_team === myTeam);
+        const isCaptainAuth = !isAdmin && state.currentUser?.isCaptain && isMyTeamMatch;
 
         // Determine outcome for player view
         let outcomeHtml = '';
@@ -619,25 +624,26 @@ const isCaptainAuth = !isAdmin && state.currentUser?.isCaptain && isMyTeamMatch;
             const isP1 = userId === m.p1_id;
             const myScore  = isP1 ? m.score1 : m.score2;
             const oppScore = isP1 ? m.score2 : m.score1;
-            if (myScore > oppScore)       outcomeHtml = `<span class="result-outcome outcome-win">WIN</span>`;
-            else if (myScore < oppScore)  outcomeHtml = `<span class="result-outcome outcome-loss">LOSS</span>`;
-            else                          outcomeHtml = `<span class="result-outcome outcome-draw">DRAW</span>`;
+            if (myScore > oppScore)       outcomeHtml = `<div class="match-result-badge win">VICTORY</div>`;
+            else if (myScore < oppScore)  outcomeHtml = `<div class="match-result-badge loss">DEFEAT</div>`;
+            else                          outcomeHtml = `<div class="match-result-badge draw">DRAW</div>`;
         }
 
-        // Score or action
-// Score or action
+        // Score or action section
         let centerHtml;
         if (isCompleted) {
             const s1 = m.score1 ?? '?', s2 = m.score2 ?? '?';
             centerHtml = `
-                <div class="text-center">
-                    <div class="match-score-display">${s1} - ${s2}</div>
-                    ${outcomeHtml ? `<div class="mt-2">${outcomeHtml}</div>` : ''}
-                    
-                    <!-- NEW: Admin Edit Button -->
+                <div class="flex flex-col items-center justify-center w-full">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="score-box score-apex-box">${s1}</div>
+                        <div class="text-[9px] font-black text-slate-500 italic">VS</div>
+                        <div class="score-box score-phantom-box">${s2}</div>
+                    </div>
+                    ${outcomeHtml}
                     ${isAdmin ? `
                         <button onclick="openResultModal('${m.docId}','${m.p1_name}','${m.p2_name}',${m.round})" 
-                            class="text-[9px] text-gold-400 hover:text-white underline mt-2 font-black uppercase tracking-widest transition-colors">
+                            class="admin-edit-score-btn mt-2">
                             <i data-lucide="edit-3" class="w-3 h-3 inline-block mr-0.5 mb-0.5"></i>Edit Score
                         </button>
                     ` : ''}
@@ -645,29 +651,38 @@ const isCaptainAuth = !isAdmin && state.currentUser?.isCaptain && isMyTeamMatch;
         } else {
             const canSubmit = isMine || isAdmin || isCaptainAuth;
             centerHtml = `
-                <div class="text-center">
-                    <div class="match-vs-text">VS</div>
+                <div class="flex flex-col items-center justify-center">
+                    <div class="vs-shield mb-2">
+                        <i data-lucide="swords" class="w-4 h-4 text-slate-400"></i>
+                    </div>
                     ${canSubmit
                         ? `<button onclick="openResultModal('${m.docId}','${m.p1_name}','${m.p2_name}',${m.round})"
-                              class="submit-result-btn">Submit Score</button>`
-                        : `<span class="text-[9px] text-slate-600 font-bold uppercase">Pending</span>`
+                              class="action-btn-submit">Submit Score</button>`
+                        : `<span class="badge badge-pending">PENDING</span>`
                     }
                 </div>`;
         }
 
         html += `
-        <div class="match-card ${isMine ? 'my-match' : ''} ${isCompleted ? 'completed' : ''} animate-float-in"
-             style="animation-delay: ${idx * 0.05}s; animation-fill-mode: both;">
-            <!-- APEX side -->
-            <div class="flex items-center gap-2 justify-between">
-                <div class="flex-1 text-center">
-                    <div class="text-[8px] font-black text-purple-400 uppercase tracking-[0.15em] mb-1.5">APEX</div>
-                    <div class="text-[11px] font-black text-white uppercase leading-tight truncate px-1">${m.p1_name || '?'}</div>
+        <div class="premium-match-card ${isMine ? 'is-my-match' : ''} ${isCompleted ? 'is-completed' : ''} animate-float-in" style="animation-delay: ${idx * 0.05}s;">
+            ${isMine ? `<div class="my-match-indicator"><i data-lucide="star" class="w-2.5 h-2.5 inline-block mr-1"></i>YOUR MATCH</div>` : ''}
+            
+            <div class="premium-match-inner">
+                <!-- APEX Side -->
+                <div class="player-col">
+                    <div class="team-mini-label text-purple-400">APEX</div>
+                    <div class="player-name-display">${m.p1_name || '?'}</div>
                 </div>
-                <div class="flex-shrink-0">${centerHtml}</div>
-                <div class="flex-1 text-center">
-                    <div class="text-[8px] font-black text-cyan-400 uppercase tracking-[0.15em] mb-1.5">Phantom</div>
-                    <div class="text-[11px] font-black text-white uppercase leading-tight truncate px-1">${m.p2_name || '?'}</div>
+                
+                <!-- Center VS / Score -->
+                <div class="center-col">
+                    ${centerHtml}
+                </div>
+                
+                <!-- PHANTOM Side -->
+                <div class="player-col">
+                    <div class="team-mini-label text-cyan-400">PHANTOM</div>
+                    <div class="player-name-display">${m.p2_name || '?'}</div>
                 </div>
             </div>
         </div>`;
@@ -832,6 +847,7 @@ async function generateMatches() {
     const apex   = state.players.filter(p => p.team === 'APEX');
     const phantom = state.players.filter(p => p.team === 'PHANTOM');
 
+    // চেকিং: ১২ জন করে আছে কিনা
     if (apex.length !== 12 || phantom.length !== 12) {
         return showToast(
             `Need 12 per team. APEX: ${apex.length}, PHANTOM: ${phantom.length}`,
@@ -846,40 +862,57 @@ async function generateMatches() {
                 showToast('Generating 3 rounds of matches...', 'loader');
                 const batch = db.batch();
 
-                // Clear existing matches
+                // আগের সব ম্যাচ ক্লিয়ার করা
                 const oldMatches = await db.collection('matches').get();
                 oldMatches.forEach(doc => batch.delete(doc.ref));
 
-                // Generate round-robin style (3 rounds, 12 matches each)
+                let matchCount = 0;
+                // ৩ রাউন্ডের জন্য রাউন্ড-রবিন ম্যাচ তৈরি (৩ * ১২ = ৩৬ ম্যাচ)
                 for (let round = 1; round <= 3; round++) {
                     const offset = round - 1;
                     for (let i = 0; i < 12; i++) {
                         const p1 = apex[i];
                         const p2 = phantom[(i + offset) % 12];
+                        
+                        // ডাটা সেফটি চেক
+                        if (!p1 || !p2) continue;
+
                         const matchRef = db.collection('matches').doc();
                         batch.set(matchRef, {
-                            round,
-                            p1_id: p1.id, p1_name: p1.name, p1_team: 'APEX',
-                            p2_id: p2.id, p2_name: p2.name, p2_team: 'PHANTOM',
-                            score1: null, score2: null,
+                            round: round,
+                            p1_id: p1.id || 'Unknown', 
+                            p1_name: p1.name || 'Unknown', 
+                            p1_team: 'APEX',
+                            p2_id: p2.id || 'Unknown', 
+                            p2_name: p2.name || 'Unknown', 
+                            p2_team: 'PHANTOM',
+                            score1: null, 
+                            score2: null,
                             status: 'pending'
                         });
+                        matchCount++;
                     }
                 }
 
+                // সিস্টেম স্টেট আপডেট করা
                 batch.set(
                     db.collection('system').doc('state'),
                     { currentRound: 1 },
                     { merge: true }
                 );
 
+                // ফায়ারবেসে সব একসাথে সেভ করা
                 await batch.commit();
+                
                 state.selectedRound = 1;
                 state.adminSelectedRound = 1;
-                showToast('33 matches generated! Round 1 is live.', 'check-circle');
+                renderUI(); // UI সাথে সাথে আপডেট করার জন্য
+                
+                showToast(`${matchCount} matches generated! Round 1 is live.`, 'check-circle');
             } catch (err) {
                 console.error('Generate matches error:', err);
-                showToast('Failed to generate matches', 'x-circle');
+                // ফায়ারবেসের কারণে ফেইল হলে এরর মেসেজ দেখাবে
+                showToast('Failed to generate: ' + err.message, 'x-circle');
             }
         }
     );
@@ -1005,36 +1038,43 @@ async function saveResult() {
 let confirmCallback = null;
 
 function showConfirmModal(message, callback) {
-    const modal   = document.getElementById('modal-confirm');
-    const msgEl   = document.getElementById('confirm-msg');
-    if (!modal || !msgEl) { if (confirm(message)) callback(); return; }
-
-    msgEl.textContent  = message;
-    confirmCallback    = callback;
+    const modal = document.getElementById('modal-confirm');
+    const msgEl = document.getElementById('confirm-msg');
+    
+    // যদি কোনো কারণে মডাল না থাকে, তবে ডিফল্ট ব্রাউজার অ্যালার্ট দেখাবে
+    if (!modal || !msgEl) {
+        if (confirm(message)) callback();
+        return;
+    }
+    
+    msgEl.textContent = message;
+    confirmCallback = callback;
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
 }
 
 function closeConfirmModal() {
     const modal = document.getElementById('modal-confirm');
-    if (modal) { modal.classList.add('hidden'); modal.style.display = ''; }
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = '';
+    }
     confirmCallback = null;
 }
 
+// 🔥 এখানেই মূল সমস্যাটি ছিল! এটি আপডেট করা হলো:
 function confirmOk() {
+    // পপ-আপ বন্ধ করার আগেই ফাংশনটি সেভ করে নিচ্ছি
+    const actionToRun = confirmCallback;
+    
+    // পপ-আপ বন্ধ করা হচ্ছে
     closeConfirmModal();
-    if (typeof confirmCallback === 'function') {
-        confirmCallback();
-        confirmCallback = null;
+    
+    // এবার সেভ করা ফাংশনটি রান করানো হচ্ছে
+    if (typeof actionToRun === 'function') {
+        actionToRun();
     }
 }
-
-// Wire up confirm button
-document.addEventListener('DOMContentLoaded', () => {
-    const okBtn = document.getElementById('confirm-ok-btn');
-    if (okBtn) okBtn.addEventListener('click', confirmOk);
-});
-
 // ========================
 // CLOSE MODALS ON BACKDROP CLICK
 // ========================
