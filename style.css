@@ -736,3 +736,101 @@ body {
     box-shadow: 0 0 10px rgba(245,158,11,0.4);
 }
 .captain-btn:active { transform: scale(0.9); }
+
+/* ========================
+   PREMIUM MATCH CARDS (MY MATCHES / FIXTURES)
+   ======================== */
+.premium-match-card {
+    background: linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(2,6,23,0.95) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.premium-match-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+.premium-match-card.is-my-match {
+    border: 1px solid rgba(245,158,11,0.4);
+    box-shadow: 0 0 20px rgba(245,158,11,0.1), inset 0 0 15px rgba(245,158,11,0.05);
+}
+.premium-match-card.is-completed {
+    opacity: 0.85;
+}
+.my-match-indicator {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+    color: black;
+    font-size: 8px; font-weight: 900; text-transform: uppercase;
+    letter-spacing: 0.2em; text-align: center; padding: 4px 0;
+}
+.premium-match-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 14px; position: relative;
+}
+/* Side Background Glows */
+.premium-match-inner::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 40%;
+    background: radial-gradient(circle at left, rgba(139,92,246,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+.premium-match-inner::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 40%;
+    background: radial-gradient(circle at right, rgba(6,182,212,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+.player-col { flex: 1; text-align: center; z-index: 2; min-width: 0; }
+.center-col { flex-shrink: 0; width: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; }
+.team-mini-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 5px; }
+.player-name-display {
+    font-size: 13px; font-weight: 900; color: white;
+    text-transform: uppercase; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; padding: 0 4px; letter-spacing: 0.05em;
+}
+
+/* VS Shield Box */
+.vs-shield {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(45deg); box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+.vs-shield i { transform: rotate(-45deg); }
+
+/* Submit Action Button */
+.action-btn-submit {
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.15));
+    border: 1px solid rgba(16,185,129,0.4); color: #34d399;
+    font-size: 8.5px; font-weight: 900; text-transform: uppercase;
+    letter-spacing: 0.12em; padding: 6px 14px; border-radius: 8px;
+    cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(16,185,129,0.1);
+}
+.action-btn-submit:hover { background: rgba(16,185,129,0.3); transform: translateY(-1px); }
+.action-btn-submit:active { transform: scale(0.95); }
+
+/* Score Display Boxes */
+.score-box {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; border-radius: 8px; color: white;
+}
+.score-apex-box { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); box-shadow: inset 0 0 10px rgba(139,92,246,0.1); }
+.score-phantom-box { background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.3); box-shadow: inset 0 0 10px rgba(6,182,212,0.1); }
+
+/* Win/Loss Badges */
+.match-result-badge {
+    font-size: 8px; font-weight: 900; padding: 4px 12px; border-radius: 6px;
+    text-transform: uppercase; letter-spacing: 0.2em; margin-top: 6px;
+}
+.match-result-badge.win { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+.match-result-badge.loss { background: rgba(244,63,94,0.15); color: #f43f5e; border: 1px solid rgba(244,63,94,0.3); }
+.match-result-badge.draw { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+
+/* Admin Edit Score Text */
+.admin-edit-score-btn {
+    color: rgba(245,158,11,0.7); font-size: 8px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer; transition: color 0.2s; margin-top: 6px; text-decoration: underline;
+}
+.admin-edit-score-btn:hover { color: var(--gold-bright); }
